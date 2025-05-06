@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScraperTemplate, scraperTemplates } from "@/data/scraperTemplates";
-import { Search, Linkedin, Mail, FileText, WalletCards } from "lucide-react";
+import { Search, Linkedin, Mail, FileText, WalletCards, Sparkles } from "lucide-react";
 import CreditPurchaseDialog from "./CreditPurchaseDialog";
 
 interface TemplateSelectorProps {
@@ -15,19 +15,29 @@ const TemplateSelector = ({ onSelectTemplate }: TemplateSelectorProps) => {
   const [availableCredits, setAvailableCredits] = useState<number>(50); // Simulate 50 available credits
 
   const handleTemplateSelect = (template: ScraperTemplate) => {
-    // Check if user has enough credits
+    // Check if the template is free
     const cost = getTemplateCreditCost(template);
     
-    if (availableCredits < cost) {
+    if (cost > 0 && availableCredits < cost) {
       // Not enough credits, we would show the purchase dialog here
       return;
     }
     
     setSelectedTemplate(template.id);
     onSelectTemplate(template);
+    
+    // If the template is not free, deduct credits
+    if (cost > 0) {
+      setAvailableCredits(prevCredits => prevCredits - cost);
+    }
   };
 
   const getTemplateCreditCost = (template: ScraperTemplate): number => {
+    // Check if the template is marked as free
+    if (template.isFree) {
+      return 0;
+    }
+    
     // Different templates have different credit costs
     switch (template.id) {
       case "google-search":
@@ -73,7 +83,8 @@ const TemplateSelector = ({ onSelectTemplate }: TemplateSelectorProps) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {scraperTemplates.map((template) => {
           const creditCost = getTemplateCreditCost(template);
-          const canAfford = availableCredits >= creditCost;
+          const canAfford = creditCost === 0 || availableCredits >= creditCost;
+          const isFree = creditCost === 0;
           
           return (
             <Card 
@@ -89,10 +100,23 @@ const TemplateSelector = ({ onSelectTemplate }: TemplateSelectorProps) => {
                     {getIcon(template.icon)}
                   </div>
                   <div className="flex flex-col items-end">
-                    <CardTitle className="text-lg">{template.name}</CardTitle>
+                    <div className="flex items-center">
+                      <CardTitle className="text-lg">{template.name}</CardTitle>
+                      {isFree && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                          <Sparkles className="mr-1 h-3 w-3" /> Free
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
-                      <WalletCards className="h-3.5 w-3.5" />
-                      <span>{creditCost} credits</span>
+                      {!isFree ? (
+                        <>
+                          <WalletCards className="h-3.5 w-3.5" />
+                          <span>{creditCost} credits</span>
+                        </>
+                      ) : (
+                        <span className="text-green-600">No credits required</span>
+                      )}
                     </div>
                   </div>
                 </div>

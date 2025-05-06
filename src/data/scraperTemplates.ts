@@ -5,6 +5,7 @@ export interface ScraperTemplate {
   description: string;
   icon: 'search' | 'linkedin' | 'mail' | 'file-text';
   url?: string;
+  isFree?: boolean;
   elements: Array<{
     id: string;
     name: string;
@@ -20,6 +21,7 @@ export const scraperTemplates: ScraperTemplate[] = [
     description: "Extract search results from Google including titles, links, and snippets",
     icon: "search",
     url: "https://www.google.com/search?q=web+scraping",
+    isFree: true, // Free template
     elements: [
       { id: "elem1", name: "Result Title", selector: "h3", type: "text" },
       { id: "elem2", name: "Result URL", selector: "a[href]", type: "attribute:href" },
@@ -45,6 +47,7 @@ export const scraperTemplates: ScraperTemplate[] = [
     name: "Email Extractor",
     description: "Find and extract email addresses from any webpage",
     icon: "mail",
+    isFree: true, // Free template
     elements: [
       { id: "elem1", name: "Email Addresses", selector: "a[href^='mailto:']", type: "attribute:href" },
       { id: "elem2", name: "Email Text", selector: "a[href^='mailto:']", type: "text" },
@@ -63,5 +66,18 @@ export const scraperTemplates: ScraperTemplate[] = [
       { id: "elem4", name: "Image URL", selector: "img.product-image", type: "attribute:src" },
       { id: "elem5", name: "SKU/ID", selector: "span.sku, div.product-id", type: "text" },
     ]
+  },
+  {
+    id: "basic-article",
+    name: "Basic Article Extractor",
+    description: "Extract content from blog posts and articles including title, author, and body text",
+    icon: "file-text",
+    isFree: true, // Free template
+    elements: [
+      { id: "elem1", name: "Article Title", selector: "h1, .article-title, .post-title", type: "text" },
+      { id: "elem2", name: "Author", selector: ".author, .byline, .post-author", type: "text" },
+      { id: "elem3", name: "Date Published", selector: ".date, .published, time", type: "text" },
+      { id: "elem4", name: "Article Content", selector: "article, .post-content, .entry-content", type: "text" },
+    ]
   }
-];
+]
