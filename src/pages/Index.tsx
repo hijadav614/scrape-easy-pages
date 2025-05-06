@@ -37,7 +37,7 @@ const Index = () => {
             </div>
           </div>
           
-          {/* Browser mockup */}
+          {/* Browser mockup with natural scraping image */}
           <div className="relative mx-auto max-w-4xl rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
             <div className="bg-gray-100 h-8 flex items-center px-4 border-b border-gray-200">
               <div className="flex space-x-2 mr-4">
@@ -48,13 +48,23 @@ const Index = () => {
               <div className="bg-white rounded-md flex-1 h-5"></div>
             </div>
             <div className="bg-white h-[400px] md:h-[500px] flex items-center justify-center p-4">
-              <div className="w-full h-full bg-gradient-to-br from-brand-blue/10 to-brand-purple/10 rounded-lg border border-gray-100 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="animate-pulse-slow">
-                    <div className="h-12 w-12 mx-auto mb-4 bg-gradient-to-br from-brand-blue to-brand-purple rounded-lg flex items-center justify-center">
-                      <Database className="h-6 w-6 text-white" />
+              <div className="w-full h-full rounded-lg border border-gray-100 flex flex-col items-center justify-center">
+                <div className="relative w-full h-full">
+                  <img 
+                    src="/lovable-uploads/3f6f6887-2bd3-44a6-bd28-04b911b8069a.png" 
+                    alt="Web scraping visualization" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-brand-blue/10 to-brand-purple/10 flex items-center justify-center">
+                    <div className="text-center bg-white/80 backdrop-blur-sm p-6 rounded-lg shadow-md">
+                      <div className="h-12 w-12 mx-auto mb-4 bg-gradient-to-br from-brand-blue to-brand-purple rounded-lg flex items-center justify-center">
+                        <Database className="h-6 w-6 text-white" />
+                      </div>
+                      <p className="text-gray-700 font-medium">Scraping website data...</p>
+                      <div className="mt-3 w-48 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-brand-blue rounded-full animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite] w-2/3"></div>
+                      </div>
                     </div>
-                    <p className="text-gray-500">Scraping website data...</p>
                   </div>
                 </div>
               </div>
