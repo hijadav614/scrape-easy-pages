@@ -1,11 +1,29 @@
-
 import { Link } from "react-router-dom";
 import PageLayout from "@/components/PageLayout";
 import { Button } from "@/components/ui/button";
-import { Code, Database, LineChart, LayoutDashboard, CreditCard, WalletCards } from "lucide-react";
+import { Code, Database, LineChart, LayoutDashboard, CreditCard, WalletCards, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { scraperTemplates } from "@/data/scraperTemplates";
 
 const Index = () => {
+  // Filter out the free templates
+  const freeTemplates = scraperTemplates.filter(template => template.isFree);
+
+  const getTemplateIcon = (iconName) => {
+    switch (iconName) {
+      case 'search':
+        return <Code className="h-6 w-6 text-white" />;
+      case 'linkedin':
+        return <LayoutDashboard className="h-6 w-6 text-white" />;
+      case 'mail':
+        return <Database className="h-6 w-6 text-white" />;
+      case 'file-text':
+        return <LineChart className="h-6 w-6 text-white" />;
+      default:
+        return <Code className="h-6 w-6 text-white" />;
+    }
+  };
+
   return (
     <PageLayout>
       {/* Hero Section */}
@@ -69,6 +87,58 @@ const Index = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+      
+      {/* Free Templates Section */}
+      <section className="py-16 bg-gradient-to-r from-blue-50 to-purple-50">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 border border-green-200 mb-4">
+              <Sparkles className="h-4 w-4" />
+              <span className="text-sm font-medium">No credit card required</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Start scraping for free today
+            </h2>
+            <p className="text-xl text-gray-600 mb-6">
+              Get started with our completely free templates - no credit card required!
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {freeTemplates.map((template) => (
+              <Card key={template.id} className="border-2 border-brand-blue/10 hover:border-brand-blue/30 transition-all hover:shadow-lg">
+                <CardHeader className="pb-4">
+                  <div className="flex justify-between items-start">
+                    <div className="p-3 rounded-lg bg-gradient-to-br from-brand-blue to-brand-purple">
+                      {getTemplateIcon(template.icon)}
+                    </div>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <Sparkles className="mr-1 h-3 w-3" /> Free
+                    </span>
+                  </div>
+                  <CardTitle className="mt-3">{template.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-gray-600 min-h-[80px]">
+                    {template.description}
+                  </CardDescription>
+                </CardContent>
+                <CardFooter>
+                  <Button asChild variant="default" className="w-full">
+                    <Link to="/builder">Try Now</Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+          
+          <div className="text-center mt-10">
+            <Button asChild variant="outline" size="lg" className="px-8">
+              <Link to="/builder">Explore All Templates</Link>
+            </Button>
           </div>
         </div>
       </section>
