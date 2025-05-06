@@ -1,22 +1,15 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import PageLayout from "@/components/PageLayout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -32,280 +25,284 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, Filter, RefreshCw } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Download, RefreshCw, FileText } from "lucide-react";
 
-// Mock data for scraping results
-const mockResults = [
-  {
-    id: "r1",
-    title: "Lightweight Ergonomic Desk Chair",
-    price: "$129.99",
-    rating: "4.5/5",
-    inStock: "Yes",
-    imageUrl: "https://example.com/chair1.jpg",
-  },
-  {
-    id: "r2",
-    title: "Executive Office Chair with Lumbar Support",
-    price: "$249.99",
-    rating: "4.8/5",
-    inStock: "Yes",
-    imageUrl: "https://example.com/chair2.jpg",
-  },
-  {
-    id: "r3",
-    title: "Gaming Chair with Footrest",
-    price: "$189.95",
-    rating: "4.2/5",
-    inStock: "No",
-    imageUrl: "https://example.com/chair3.jpg",
-  },
-  {
-    id: "r4",
-    title: "Mesh Back Office Chair",
-    price: "$119.50",
-    rating: "3.9/5",
-    inStock: "Yes",
-    imageUrl: "https://example.com/chair4.jpg",
-  },
-  {
-    id: "r5",
-    title: "Adjustable Standing Desk Converter",
-    price: "$299.99",
-    rating: "4.7/5",
-    inStock: "Yes",
-    imageUrl: "https://example.com/desk1.jpg",
-  },
-  {
-    id: "r6",
-    title: "Kneeling Chair for Better Posture",
-    price: "$89.95",
-    rating: "4.0/5",
-    inStock: "Yes",
-    imageUrl: "https://example.com/chair5.jpg",
-  },
-  {
-    id: "r7",
-    title: "Conference Room Chair Set (4-Pack)",
-    price: "$379.99",
-    rating: "4.4/5",
-    inStock: "No",
-    imageUrl: "https://example.com/chairs-set.jpg",
-  },
-];
+interface ScraperResult {
+  id: string;
+  timestamp: string;
+  data: Record<string, string>;
+}
+
+interface Scraper {
+  id: string;
+  name: string;
+  url: string;
+  elements: Array<{ id: string; name: string; selector: string; type: string }>;
+  results: ScraperResult[];
+}
 
 const ResultsViewer = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [results] = useState(mockResults);
+  const { toast } = useToast();
+  const [scrapers, setScrapers] = useState<Scraper[]>([]);
+  const [currentScraperId, setCurrentScraperId] = useState<string | null>(null);
+  const [currentScraper, setCurrentScraper] = useState<Scraper | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredResults = results.filter((result) =>
-    Object.values(result).some((value) =>
-      String(value).toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+  useEffect(() => {
+    // Load scrapers from localStorage
+    const savedScrapers = JSON.parse(localStorage.getItem("scrapers") || "[]");
+    setScrapers(savedScrapers);
+
+    // Check if we have a current scraper ID from localStorage
+    const savedCurrentScraperId = localStorage.getItem("current_scraper_id");
+    if (savedCurrentScraperId) {
+      setCurrentScraperId(savedCurrentScraperId);
+    } else if (savedScrapers.length > 0) {
+      // Default to the first scraper if none is selected
+      setCurrentScraperId(savedScrapers[0].id);
+    }
+
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (currentScraperId && scrapers.length > 0) {
+      const scraper = scrapers.find((s) => s.id === currentScraperId);
+      setCurrentScraper(scraper || null);
+    } else {
+      setCurrentScraper(null);
+    }
+  }, [currentScraperId, scrapers]);
+
+  const handleScraperChange = (scraperId: string) => {
+    setCurrentScraperId(scraperId);
+    localStorage.setItem("current_scraper_id", scraperId);
+  };
+
+  const handleRefresh = () => {
+    setIsLoading(true);
+    
+    toast({
+      title: "Refreshing results",
+      description: "Fetching the latest data from the target website",
+    });
+    
+    // Simulate a refresh
+    setTimeout(() => {
+      if (currentScraper) {
+        // Add a new result to the current scraper
+        const newResult = {
+          id: `result${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          data: currentScraper.elements.reduce((acc, elem) => {
+            acc[elem.name] = `Updated ${elem.name} data - ${new Date().toLocaleTimeString()}`;
+            return acc;
+          }, {} as Record<string, string>)
+        };
+        
+        const updatedScrapers = scrapers.map(scraper => 
+          scraper.id === currentScraperId
+            ? { ...scraper, results: [newResult, ...scraper.results] }
+            : scraper
+        );
+        
+        setScrapers(updatedScrapers);
+        localStorage.setItem("scrapers", JSON.stringify(updatedScrapers));
+        
+        toast({
+          title: "Results refreshed",
+          description: "Successfully fetched new data from the target website",
+        });
+      }
+      
+      setIsLoading(false);
+    }, 1500);
+  };
+
+  const handleExportCSV = () => {
+    if (!currentScraper || currentScraper.results.length === 0) return;
+    
+    // Convert results to CSV
+    const headers = Object.keys(currentScraper.results[0].data).join(",");
+    const rows = currentScraper.results.map(result => {
+      return Object.values(result.data).map(value => `"${value}"`).join(",");
+    }).join("\n");
+    
+    const csv = `${headers}\n${rows}`;
+    
+    // Create a download link
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.setAttribute("href", url);
+    a.setAttribute("download", `${currentScraper.name.replace(/\s+/g, "_")}_results.csv`);
+    a.click();
+    
+    toast({
+      title: "Export complete",
+      description: "CSV file has been downloaded",
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <PageLayout>
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex justify-center items-center h-[60vh]">
+            <p className="text-lg text-gray-500">Loading results...</p>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (scrapers.length === 0) {
+    return (
+      <PageLayout>
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex flex-col justify-center items-center h-[60vh] text-center">
+            <FileText className="h-16 w-16 text-gray-300 mb-4" />
+            <h2 className="text-2xl font-bold mb-2">No scrapers found</h2>
+            <p className="text-gray-500 mb-6">
+              You haven't created any scrapers yet. Go to the Scraper Builder to get started.
+            </p>
+            <Button asChild>
+              <a href="/builder">Create Scraper</a>
+            </Button>
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>
       <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold mb-1">Scraper Results</h1>
-            <p className="text-gray-600">
-              Product Prices - Amazon (Last run: 3 hours ago)
-            </p>
+            <p className="text-gray-600">View and analyze the data extracted from your target websites</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+          
+          <div className="mt-4 md:mt-0 flex items-center gap-4">
+            <div className="w-64">
+              <Select 
+                value={currentScraperId || ""} 
+                onValueChange={handleScraperChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a scraper" />
+                </SelectTrigger>
+                <SelectContent>
+                  {scrapers.map((scraper) => (
+                    <SelectItem key={scraper.id} value={scraper.id}>
+                      {scraper.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={handleRefresh}
+              disabled={isLoading || !currentScraper}
+            >
+              <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
             </Button>
-            <Button size="sm">
-              <Download className="h-4 w-4 mr-2" /> Export
+            
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={handleExportCSV}
+              disabled={!currentScraper || currentScraper.results.length === 0}
+            >
+              <Download className="h-5 w-5" />
             </Button>
           </div>
         </div>
 
-        <Tabs defaultValue="table">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-            <TabsList>
-              <TabsTrigger value="table">Table View</TabsTrigger>
-              <TabsTrigger value="json">JSON</TabsTrigger>
-              <TabsTrigger value="history">History</TabsTrigger>
-            </TabsList>
-            
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Input
-                placeholder="Search results..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full sm:w-auto"
-              />
-              <Button variant="outline" size="icon">
-                <Filter className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <TabsContent value="table">
-            <Card>
-              <CardHeader className="pb-0">
-                <div className="flex justify-between">
-                  <CardTitle>Data Output</CardTitle>
-                  <Select defaultValue="newest">
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Sort by" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="newest">Newest First</SelectItem>
-                      <SelectItem value="oldest">Oldest First</SelectItem>
-                      <SelectItem value="price-asc">Price: Low to High</SelectItem>
-                      <SelectItem value="price-desc">Price: High to Low</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+        {currentScraper ? (
+          <>
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>{currentScraper.name}</CardTitle>
                 <CardDescription>
-                  Showing {filteredResults.length} of {results.length} results
+                  Target URL: <a href={currentScraper.url} target="_blank" rel="noopener noreferrer" className="text-brand-blue hover:underline">{currentScraper.url}</a>
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product Title</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Rating</TableHead>
-                        <TableHead>In Stock</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredResults.map((result) => (
-                        <TableRow key={result.id}>
-                          <TableCell className="font-medium max-w-[300px] truncate">
-                            {result.title}
-                          </TableCell>
-                          <TableCell>{result.price}</TableCell>
-                          <TableCell>{result.rating}</TableCell>
-                          <TableCell>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                result.inStock === "Yes"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {result.inStock}
-                            </span>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {filteredResults.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8 text-gray-500">
-                            No results found matching your search
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-              <CardFooter className="border-t flex justify-between py-4">
+              <CardContent>
                 <div className="text-sm text-gray-500">
-                  Last updated: May 5, 2025 at 10:45 AM
+                  <p>Total elements: {currentScraper.elements.length}</p>
+                  <p>Results count: {currentScraper.results.length}</p>
+                  {currentScraper.results.length > 0 && (
+                    <p>Last updated: {new Date(currentScraper.results[0].timestamp).toLocaleString()}</p>
+                  )}
                 </div>
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" /> Export CSV
-                </Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="json">
-            <Card>
-              <CardHeader>
-                <CardTitle>JSON Data</CardTitle>
-                <CardDescription>
-                  Raw JSON output from your scraper
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <pre className="bg-gray-50 p-4 rounded-md overflow-auto text-xs sm:text-sm font-mono border max-h-[500px]">
-                  {JSON.stringify(filteredResults, null, 2)}
-                </pre>
-              </CardContent>
-              <CardFooter>
-                <Button variant="outline" className="w-full">
-                  <Download className="mr-2 h-4 w-4" /> Download JSON
-                </Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="history">
-            <Card>
-              <CardHeader>
-                <CardTitle>Scraping History</CardTitle>
-                <CardDescription>
-                  View historical data collections from this scraper
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Items Scraped</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>May 5, 2025 10:45 AM</TableCell>
-                      <TableCell>7 items</TableCell>
-                      <TableCell>12 seconds</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm">
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>May 4, 2025 10:45 AM</TableCell>
-                      <TableCell>7 items</TableCell>
-                      <TableCell>14 seconds</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm">
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>May 3, 2025 10:45 AM</TableCell>
-                      <TableCell>8 items</TableCell>
-                      <TableCell>11 seconds</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm">
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>May 2, 2025 10:45 AM</TableCell>
-                      <TableCell>8 items</TableCell>
-                      <TableCell>12 seconds</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm">
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+
+            <Tabs defaultValue="table" className="mb-6">
+              <TabsList>
+                <TabsTrigger value="table">Table View</TabsTrigger>
+                <TabsTrigger value="json">JSON View</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="table">
+                {currentScraper.results.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Timestamp</TableHead>
+                          {Object.keys(currentScraper.results[0].data).map((key) => (
+                            <TableHead key={key}>{key}</TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {currentScraper.results.map((result) => (
+                          <TableRow key={result.id}>
+                            <TableCell>
+                              {new Date(result.timestamp).toLocaleString()}
+                            </TableCell>
+                            {Object.values(result.data).map((value, index) => (
+                              <TableCell key={index}>{value}</TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No results found. Run the scraper to collect data.
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="json">
+                {currentScraper.results.length > 0 ? (
+                  <div className="bg-gray-50 p-4 rounded-md">
+                    <pre className="overflow-auto text-xs font-mono">
+                      {JSON.stringify(currentScraper.results, null, 2)}
+                    </pre>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No results found. Run the scraper to collect data.
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            Select a scraper to view results.
+          </div>
+        )}
       </div>
     </PageLayout>
   );
